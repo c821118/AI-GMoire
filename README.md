@@ -67,12 +67,27 @@ AI-GMoire/
 1. 在 SillyTavern 中匯入 `chub/` 底下的任一json（例如 `hogwarts_gm_1991.json`）。
 2. 角色卡已內建完整規則，可以直接開始遊玩。
 
+#### Chub.ai角色卡
+| 網址 | Token |
+| ---- | ---- |
+|[通用版規則AI-GMoire](https://chub.ai/characters/c821118/ai-gmoire-bbc126490de1)|684|
+| [霍格華茲1991 TRPG AI-GMoire](https://chub.ai/characters/c821118/huo-ge-hua-zi-1991-trpg-ai-gmoire-b1ff13bc2cea) | 3814 |
+| [霍格華茲1890 TRPG AI-GMoire](https://chub.ai/characters/c821118/huo-ge-hua-zi-1890-trpg-ai-gmoire-9dd764b87d44) | 3812 |
+
+
 ### 方法三 SillyTavern：Character Card 通用規則 + Lorebook
 
 1. 在 SillyTavern 中匯入 `chub/general_trpg_gm.json`，或將`general_TRPG_rules/AI-TRPG-主規則.md` 設為 System Prompt。
 2. Lorebook載入 `lorebooks/hogwarts_1991_lorebook.json` 或其他Lorebook。
 3. 開局時使用 `general_TRPG_rules/AI-TRPG-PC角色卡.md` 填寫角色設定。
 4. 開始遊玩。通用主規則會在每回合自動生效，Lorebook 按關鍵字觸發。
+
+#### Chub.ai世界書
+| 網址 | Token |
+| ---- | ---- |
+|[霍格華茲1991 世界書] (https://chub.ai/lorebooks/c821118/huo-ge-hua-zi-1991-shi-jie-shu-799d601aa072) | 7672 |
+|[霍格華茲1890 世界書](https://chub.ai/lorebooks/c821118/huo-ge-hua-zi-1890-shi-jie-shu-fd24518f05ae)|9338|
+
 
 ### 方法四：直接使用基礎提示詞
 
