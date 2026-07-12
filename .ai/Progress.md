@@ -84,3 +84,14 @@
 | `[x]` 說明各資料夾用途 | 已完成 |
 | `[x]` 說明使用方式 | 已完成 |
 | `[x]` 說明授權條款 | 已完成 |
+
+---
+
+## 工作流 6：通用版 GM (AI-GMoire 擴充)
+
+| 項目 | 狀態 |
+|---|---|
+| `[x]` 建立 `skills/general_trpg_gm/SKILL.md` | 已完成 |
+| `[x]` 建立 `chub/general_TRPG_gm.json` | 已完成 |
+| `[x]` 更新 Specification.md | 已完成 |
+| `[x]` 更新 README.md 目錄結構 | 已完成 |

@@ -1,4 +1,4 @@
-# GM-Prompt-Toolkit Specification
+# AI-GMoire 專案規格書
 
 版本：v0.1-draft
 作者：c821118
@@ -6,13 +6,14 @@
 
 ---
 
-## 專案概述
+## 1. 專案背景與目標
 
-GM-Prompt-Toolkit 是一套 **AI 桌上角色扮演遊戲（TRPG）規則框架**，讓 AI 扮演遊戲主持人（GM），帶領人類玩家（PC）進行文字冒險。
+**AI-GMoire**（原名 GM-Prompt-Toolkit）是一套專門設計給 AI 閱讀的 TRPG（桌上角色扮演遊戲）規則書，讓 AI 能夠扮演遊戲主持人（GM）。
+專案包含兩大核心分支：
+1. **霍格華茲專用版**：以《哈利波特》及《霍格華茲的傳承》為世界觀（目前已停止研發，但運作穩定）。
+2. **通用版**：基於霍格華茲版提煉出的輕量化、低 token 消耗的通用核心引擎。
 
-本專案包含：
-- **通用 TRPG 規則**：輕量、低 token 消耗的通用引擎，可搭配任意主題的 Lorebook 運行。
-- **霍格華茲 TRPG 規則**：以哈利波特世界觀為主題的完整規則集，已測試穩定，停止研發。
+本專案旨在將現有的 Markdown 規則文件，轉換為適用於各種 AI 平台（如 Antigravity, Chub.ai, SillyTavern）的標準格式。
 
 ---
 
@@ -114,7 +115,7 @@ GM-Prompt-Toolkit 是一套 **AI 桌上角色扮演遊戲（TRPG）規則框架*
 ## 檔案結構（規劃）
 
 ```
-GM-Prompt-Toolkit/
+AI-GMoire/
 ├── README.md                          ← 專案說明（GitHub 首頁）
 ├── Specification.md                   ← 本文件
 ├── Progress.md                        ← 工作進度追蹤
@@ -127,7 +128,7 @@ GM-Prompt-Toolkit/
 │   ├── 霍格華茲-檢索資料庫1991.md
 │   └── 霍格華茲-c821118擴充資料庫.md
 │
-├── general_TRPG_skill/                ← [唯讀] 通用版原始規則
+├── general_TRPG_rules/                ← [唯讀] 通用版原始規則
 │   ├── AI TRPG規則.md
 │   └── AI TRPG-PC角色卡.md
 │
