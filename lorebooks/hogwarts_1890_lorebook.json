@@ -19,7 +19,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "學院分類"
     },
     "1": {
       "keys": [
@@ -37,7 +40,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "魔法學術架構"
     },
     "2": {
       "keys": [
@@ -56,7 +62,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "課表規則"
     },
     "3": {
       "keys": [
@@ -76,7 +85,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "魔杖芯"
     },
     "4": {
       "keys": [
@@ -96,7 +108,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "魔杖木材"
     },
     "5": {
       "keys": [
@@ -114,7 +129,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "魔杖彈性"
     },
     "6": {
       "keys": [
@@ -135,7 +153,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "地理風險"
     },
     "7": {
       "keys": [
@@ -155,7 +176,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "咒語階級"
     },
     "8": {
       "keys": [
@@ -173,7 +197,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "古代魔法"
     },
     "9": {
       "keys": [
@@ -191,7 +218,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "物品限制"
     },
     "10": {
       "keys": [
@@ -217,7 +247,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "主要學生"
     },
     "11": {
       "keys": [
@@ -249,7 +282,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "教職員"
     },
     "12": {
       "keys": [
@@ -267,7 +303,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "反派"
     },
     "13": {
       "keys": [
@@ -284,7 +323,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": true,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "霍格華茲核心規則"
     },
     "14": {
       "keys": [
@@ -301,7 +343,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": true,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "霍格華茲輸出格式"
     },
     "15": {
       "keys": [
@@ -318,7 +363,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": true,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "霍格華茲文本過濾器"
     },
     "16": {
       "keys": [
@@ -337,7 +385,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "生死豁免機制"
     },
     "17": {
       "keys": [
@@ -355,7 +406,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "轉學生開局"
     },
     "18": {
       "keys": [
@@ -373,7 +427,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "進度總結格式"
     },
     "19": {
       "keys": [
@@ -392,7 +449,10 @@
       "selective": false,
       "secondary_keys": [],
       "constant": false,
-      "position": "before_char"
+      "position": "before_char",
+      "selectiveLogic": 0,
+      "extensions": {},
+      "name": "開局角卡"
     }
   }
 }
