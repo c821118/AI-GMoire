@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-READ_ONLY_DIRS = ("Hogwarts_TRPG_rules", "general_TRPG_rules")
+READ_ONLY_DIRS = ("rules/Hogwarts_TRPG_rules", "rules/general_TRPG_rules")
 
 
 def setup_console():
@@ -38,7 +38,7 @@ def version():
 def assert_in_readonly(path):
     """防呆：禁止寫入唯讀來源資料夾。"""
     rel = Path(path).resolve().relative_to(ROOT)
-    if rel.parts and rel.parts[0] in READ_ONLY_DIRS:
+    if any(rel.as_posix() == d or rel.as_posix().startswith(d + "/") for d in READ_ONLY_DIRS):
         raise PermissionError(f"禁止寫入唯讀來源：{rel}")
 
 

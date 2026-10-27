@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """AI-GMoire 轉置與比對腳本。
 
-以 `Hogwarts_TRPG_rules/`、`general_TRPG_rules/` 的 Markdown 為單一真相源，產生：
+以 `rules/` 底下各規則資料夾的 Markdown 為單一真相源，產生：
   - chub/*.json                      SillyTavern / Chub.ai 角色卡（chara_card_v2）
   - chub/lorebooks/*.json            搭配通用規則使用的 Lorebook
   - skills/*/references/*            Skill 的補充資料（逐字複製來源）
@@ -23,15 +23,16 @@ import sys
 from common import (ROOT, assert_in_readonly, parse_markdown, read_text, setup_console,
                     version, write_text)
 
-HOG = ROOT / "Hogwarts_TRPG_rules"
-GEN = ROOT / "general_TRPG_rules"
+RULES = ROOT / "rules"
+HOG = RULES / "Hogwarts_TRPG_rules"
+GEN = RULES / "general_TRPG_rules"
 SRC_HOG_MAIN = HOG / "霍格華茲-主規則.md"
 SRC_HOG_OPEN = HOG / "霍格華茲-開局角卡.md"
 SRC_HOG_EXT = HOG / "霍格華茲-c821118擴充資料庫.md"
 SRC_HOG_DB = {y: HOG / f"霍格華茲-檢索資料庫{y}.md" for y in ("1991", "1890")}
 SRC_GEN_MAIN = GEN / "AI-TRPG-主規則.md"
 SRC_GEN_PC = GEN / "AI-TRPG-PC角色卡.md"
-FB = ROOT / "FantasticBeasts_TRPG_rules"
+FB = RULES / "FantasticBeasts_TRPG_rules"
 SRC_FB_MAIN = FB / "怪獸產地-主規則.md"
 SRC_FB_OPEN = FB / "怪獸產地-開局角卡.md"
 SRC_FB_DB = FB / "怪獸產地-檢索資料庫.md"
@@ -53,6 +54,23 @@ def adapt(text, pairs, label):
         ADAPTATIONS.append((label, old, new))
         text = text.replace(old, new)
     return text
+
+
+def drop_lines(text, prefixes, label):
+    """移除以指定前綴開頭的整行，並登記為刻意省略。chub 版本不含任何擲骰機制，用它去掉相關欄位與說明。"""
+    lines = text.split("\n")
+    for prefix in prefixes:
+        hits = [l for l in lines if l.startswith(prefix)]
+        if len(hits) != 1:
+            raise ValueError(f"[{label}] 找不到唯一以 {prefix!r} 開頭的行（找到 {len(hits)} 行）")
+        ADAPTATIONS.append((label, hits[0], ""))
+        lines.remove(hits[0])
+    return "\n".join(lines)
+
+
+# chub（SillyTavern）的擲骰工具由玩家自行安裝，AI 無法使用，所以 chub 版本不含擲骰機制
+NO_DICE_BULLET = "- 【隨機與判定方式】"
+NO_DICE_FIELD = "    * 隨機與判定方式："
 
 
 def fence_inner(body):
@@ -245,7 +263,7 @@ def hog_parts(year, target):
                             "- 開場白已輸出[空白角色卡]，不需重複輸出，也不需隨意增加或減少說明。"))
     else:
         intro_pairs.append(("[(外部資料)空白角色卡]", "[空白角色卡]"))
-    intro = adapt(op.body, intro_pairs, label)
+    intro = drop_lines(adapt(op.body, intro_pairs, label), [NO_DICE_BULLET], label)
 
     blank_node = op.get("空白角色卡")
     if year == "1991":
@@ -262,7 +280,7 @@ def hog_parts(year, target):
              "(預設)與玩家同一屆／比玩家高一屆的學長／比玩家低一屆的學弟",
              "    * 擴充模組：1890年代版不包含湯姆瑞斗（無學生湯姆瑞斗穿越模組）"),
         ]
-    blank_inner = adapt(fence_inner(blank_node.body), blank_pairs, label)
+    blank_inner = drop_lines(adapt(fence_inner(blank_node.body), blank_pairs, label), [NO_DICE_FIELD], label)
     blank_render = "## 空白角色卡\n```\n" + blank_inner + "\n```"
     routes = op.get("PC 確認角色卡後，導入以下初始劇情").render()
     opening_card = intro + "\n\n" + routes
@@ -536,8 +554,10 @@ def fb_parts(target):
                         "- 開場白已輸出[空白角色卡]，不需重複輸出，也不需隨意增加或減少說明。")]
     else:
         intro_pairs = [("[(外部資料)空白角色卡]", "[空白角色卡]")]
-    intro = adapt(op.body, intro_pairs, label)
-    blank_inner = fence_inner(op.get("空白角色卡").body)
+    intro_pairs.append(("，結果依[隨機與判定方式]取得：工具擲骰時由工具抽取，玩家自行擲骰時由 PC 提供數字，確定性判定時由 GM 依職業與性格配置並向 PC 說明依據。",
+                        "，並向 PC 說明配置依據。"))
+    intro = drop_lines(adapt(op.body, intro_pairs, label), [NO_DICE_BULLET], label)
+    blank_inner = drop_lines(fence_inner(op.get("空白角色卡").body), [NO_DICE_FIELD], label)
     blank_render = "## 空白角色卡\n```\n" + blank_inner + "\n```"
     routes = op.get("PC 確認角色卡後，導入以下初始劇情").render()
 
@@ -626,6 +646,8 @@ def general_card():
     pc = parse_markdown(read_text(SRC_GEN_PC)).get("AI TRPG-PC角色卡").body
     cut = pc.index("\n* ") + 1
     pc_rules, pc_fields = pc[:cut].rstrip("\n"), pc[cut:]
+    pc_rules = drop_lines(pc_rules, ["5. 隨機與判定方式"], "general")
+    pc_fields = drop_lines(pc_fields, ["* 隨機與判定方式："], "general")
 
     return {
         "spec": "chara_card_v2",

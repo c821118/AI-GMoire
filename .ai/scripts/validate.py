@@ -204,7 +204,8 @@ def check_years(cards, lores):
     everything = {**{f"角色卡 {k}": card_texts(v) for k, v in cards.items()},
                   **{f"Lorebook {k}": lore_texts(v) for k, v in lores.items()}}
     for label, text in everything.items():
-        for w in ("(外部資料)",):
+        # chub 版本不含任何擲骰機制（擲骰工具僅限 Skill 版）
+        for w in ("(外部資料)", "擲骰", "隨機與判定方式", "roll.py"):
             if w in text:
                 err(f"{label} 殘留「{w}」")
     if len(errors) == start:
@@ -254,7 +255,7 @@ def check_readonly():
     if out.strip():
         warn("唯讀來源資料夾有未提交的變更（腳本不會寫入；若是你自行修改來源，請提交後重新產生）：\n      " + out.strip().replace("\n", "\n      "))
     else:
-        ok("Hogwarts_TRPG_rules/ 與 general_TRPG_rules/ 與 git 紀錄一致")
+        ok("rules/Hogwarts_TRPG_rules/ 與 rules/general_TRPG_rules/ 與 git 紀錄一致")
 
 
 def check_roll_tool():
