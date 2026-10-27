@@ -194,6 +194,8 @@ def check_years(cards, lores):
     fb_texts = {"角色卡 怪獸產地": card_texts(cards["fb"]), "Lorebook 怪獸產地": lore_texts(lores["fb"])}
     for label, path in (("主規則", build.SRC_FB_MAIN), ("開局角卡", build.SRC_FB_OPEN), ("檢索資料庫", build.SRC_FB_DB)):
         fb_texts[f"來源 怪獸產地-{label}"] = read_text(path)
+    for name in ("怪獸產地-主規則.md", "怪獸產地-開局角卡.md"):
+        fb_texts[f"偽隨機判定-rules/{name}"] = read_text(build.EXPERIMENT_DIR / name)
     for label, text in fb_texts.items():
         for line in text.splitlines():
             if line.startswith("- 統一用語："):  # 檢索資料庫刻意列出被取代的舊寫法
@@ -256,6 +258,42 @@ def check_readonly():
         warn("唯讀來源資料夾有未提交的變更（腳本不會寫入；若是你自行修改來源，請提交後重新產生）：\n      " + out.strip().replace("\n", "\n      "))
     else:
         ok("rules/Hogwarts_TRPG_rules/ 與 rules/general_TRPG_rules/ 與 git 紀錄一致")
+
+
+def check_experiment():
+    """偽隨機判定-rules（Tethered Dice 實驗版）：數值底線、與 rules 版的差異、必要章節。"""
+    section("偽隨機判定-rules（實驗版）")
+    start = len(errors)
+    import tethered_sim
+    main_path = build.EXPERIMENT_DIR / "怪獸產地-主規則.md"
+    try:
+        params = tethered_sim.load(main_path)
+    except ValueError as e:
+        err(f"判定協定表格讀取失敗：{e}")
+        return
+    sim_errors, info = tethered_sim.check(params)
+    for line in sim_errors:
+        err(line)
+    for line in info:
+        print(f"    {line}")
+    bad = tethered_sim.deterministic_ok(params)
+    if bad:
+        err(f"確定性判定（期望值）與公平成功率過半不一致的格子有 {len(bad)} 個")
+    text = read_text(main_path)
+    for need in ("## 判定協定（Tethered Dice）", "### 骰值來源", "### 行動判定", "### 社交判定", "[判定協定]"):
+        if need not in text:
+            err(f"實驗版主規則缺少「{need}」")
+    if "工具擲骰" in text or "roll.py" in text:
+        err("實驗版是 rules（沒有工具），不應含有工具擲骰")
+    # 與 rules 版主規則、開局角卡的差異應只在判定相關處，行數過多代表來源更新後沒有同步
+    for name, src in (("怪獸產地-主規則.md", build.SRC_FB_MAIN), ("怪獸產地-開局角卡.md", build.SRC_FB_OPEN)):
+        fork = read_text(build.EXPERIMENT_DIR / name)
+        missing = [l for l in body_lines(read_text(src)) if l not in fork]
+        print(f"    與 rules 版 {name} 不同的來源行：{len(missing)} 行")
+        if len(missing) > 8:
+            warn(f"{name} 與 rules 版差異較多（{len(missing)} 行），可能需要同步分支：{missing[0][:30]}")
+    if len(errors) == start:
+        ok("數值底線、必要章節與分支差異皆通過")
 
 
 def check_roll_tool():
@@ -326,6 +364,7 @@ def main():
     check_versions(cards, lores)
     check_readonly()
     check_roll_tool()
+    check_experiment()
     report_tokens(cards, lores)
 
     print(f"\n結果：{len(errors)} 個錯誤，{len(warnings)} 個警告。")

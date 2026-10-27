@@ -36,6 +36,8 @@ FB = RULES / "FantasticBeasts_TRPG_rules"
 SRC_FB_MAIN = FB / "怪獸產地-主規則.md"
 SRC_FB_OPEN = FB / "怪獸產地-開局角卡.md"
 SRC_FB_DB = FB / "怪獸產地-檢索資料庫.md"
+# 偽隨機判定（Tethered Dice）實驗版規則，與 rules/ 同層級
+EXPERIMENT_DIR = ROOT / "偽隨機判定-rules"
 # Skill 共用的工具與協定（單一來源，會複製到每個 Skill 的 scripts/ 與 references/）
 SKILL_TOOLS = ROOT / ".ai" / "skill-tools"
 
@@ -726,6 +728,8 @@ def generate():
     out[ROOT / "chub" / "general_TRPG_gm.json"] = dump_json(general_card())
     out[ROOT / FB_CFG["card"]] = dump_json(fb_card())
     out[ROOT / FB_CFG["lore"]] = dump_json(fb_lorebook())
+    # 偽隨機判定-rules（實驗版）的主規則與開局角卡是手動維護的分支；檢索資料庫與 rules 版完全相同，由腳本複製
+    out[EXPERIMENT_DIR / SRC_FB_DB.name] = read_text(SRC_FB_DB)
     for dest, src in SKILL_REFERENCES:
         out[dest] = read_text(src)
     for skill_dir in SKILL_DIRS.values():

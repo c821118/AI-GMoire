@@ -69,12 +69,19 @@ AI-GMoire/
 │       ├── hogwarts_1890_lorebook.json
 │       └── fantasticbeasts_lorebook.json
 │
+├── 偽隨機判定-rules/                ← [實驗] Tethered Dice（偽隨機判定）版怪獸產地規則，用法同 rules，僅供測試
+│   ├── 怪獸產地-主規則.md            ← 含「判定協定」
+│   ├── 怪獸產地-開局角卡.md
+│   └── 怪獸產地-檢索資料庫.md        ← 與 rules 版相同，由腳本複製
+│
 └── .ai/
     ├── scripts/                     ← 維護用腳本（轉置、比對、驗證）
     │   ├── build.py
     │   ├── validate.py
+    │   ├── tethered_sim.py          ← 偽隨機判定的數值試算與設計底線檢查
     │   ├── tokens.py
     │   └── common.py
+    ├── Tethered-Dice-設計說明.md       ← 偽隨機判定的設計理由、試算結果與測試建議
     └── skill-tools/                 ← Skill 共用的擲骰腳本與隨機協定（單一來源，由 build.py 複製到各 Skill）
         ├── roll.py
         └── 隨機與判定協定.md
@@ -147,6 +154,14 @@ Skill 內另附**選用的工具使用規則**：若 AI agent 能使用工具，
 
 判定只用於「結果不確定、失敗有意義，而且影響劇情走向」的行動，每個時間切片至多一次。
 角色卡原本的「隨機」選項已改為「AI推薦」：GM 依其他欄位推薦合理選項供玩家確認，不使用機率。
+
+### 實驗：偽隨機判定（Tethered Dice）
+
+`偽隨機判定-rules/` 是 rules 玩法的實驗版，目前仍在測試，**只提供怪獸產地**。用法與 rules 相同，上傳到 NotebookLM 這類不具備工具的 AI 介面。
+
+它讓 AI 在後台自己擲骰，但公式的設計讓骰子只在邊界上起作用：DC、依熟練度而定的修正值（有正有負）與特殊骰決定大部分結果，
+所以即使 AI 為了討好玩家一直擲出最大值，也無法讓遠超能力的行動成功。特殊骰則為玩家保留「奇蹟」的機會。
+設計理由、試算結果與測試建議見 [Tethered-Dice-設計說明](.ai/Tethered-Dice-設計說明.md)。
 
 ---
 
