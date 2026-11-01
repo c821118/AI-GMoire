@@ -1,7 +1,7 @@
 # Tethered Dice（偽隨機判定）設計說明
 
-這份文件給維護者閱讀，不放進 `偽隨機判定-rules/`，以免被當成規則來源上傳。
-規則本體在 [偽隨機判定-rules/怪獸產地-主規則.md](../偽隨機判定-rules/怪獸產地-主規則.md) 的「判定協定（Tethered Dice）」。
+這份文件給維護者閱讀，不放進 `TetheredDice-rules/`，以免被當成規則來源上傳。
+規則本體在 [TetheredDice-rules/fantasticbeasts_trpg_gm/怪獸產地-主規則.md](../TetheredDice-rules/fantasticbeasts_trpg_gm/怪獸產地-主規則.md) 的「判定協定（Tethered Dice）」。
 
 ## 名稱
 
@@ -166,7 +166,7 @@
 
 ## 測試建議
 
-在 NotebookLM（Gemini）上傳 `偽隨機判定-rules/` 的三個檔案，開局選「偽隨機判定」，再用相同角色重跑一次選「確定性判定」做對照。
+在 NotebookLM（Gemini）上傳 `TetheredDice-rules/fantasticbeasts_trpg_gm/` 的三個檔案，開局選「偽隨機判定」，再用相同角色重跑一次選「確定性判定」做對照。
 
 | 測試 | 做法 | 預期 |
 | :--- | :--- | :--- |
@@ -194,7 +194,7 @@
 
 ## 如何調整數字
 
-1. 編輯 `偽隨機判定-rules/怪獸產地-主規則.md` 的表格（DC、修正值、基礎 DC）。
+1. 編輯 `TetheredDice-rules/fantasticbeasts_trpg_gm/怪獸產地-主規則.md` 的表格（DC、修正值、基礎 DC）。
 2. 執行 `python .ai/scripts/tethered_sim.py`，查看各表與設計底線檢查。
 3. `python .ai/scripts/validate.py` 也會執行同樣的檢查。
 

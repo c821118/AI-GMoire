@@ -195,7 +195,7 @@ def check_years(cards, lores):
     for label, path in (("主規則", build.SRC_FB_MAIN), ("開局角卡", build.SRC_FB_OPEN), ("檢索資料庫", build.SRC_FB_DB)):
         fb_texts[f"來源 怪獸產地-{label}"] = read_text(path)
     for name in ("怪獸產地-主規則.md", "怪獸產地-開局角卡.md"):
-        fb_texts[f"偽隨機判定-rules/{name}"] = read_text(build.EXPERIMENT_DIR / name)
+        fb_texts[f"TetheredDice-rules/{name}"] = read_text(build.EXPERIMENT_DIR / name)
     for label, text in fb_texts.items():
         for line in text.splitlines():
             if line.startswith("- 統一用語："):  # 檢索資料庫刻意列出被取代的舊寫法
@@ -261,8 +261,8 @@ def check_readonly():
 
 
 def check_experiment():
-    """偽隨機判定-rules（Tethered Dice 實驗版）：數值底線、與 rules 版的差異、必要章節。"""
-    section("偽隨機判定-rules（實驗版）")
+    """TetheredDice-rules（Tethered Dice 實驗版）：數值底線、與 rules 版的差異、必要章節。"""
+    section("TetheredDice-rules（實驗版）")
     start = len(errors)
     import tethered_sim
     main_path = build.EXPERIMENT_DIR / "怪獸產地-主規則.md"

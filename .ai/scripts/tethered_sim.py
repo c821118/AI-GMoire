@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tethered Dice（偽隨機判定）數值試算。
 
-從 `偽隨機判定-rules/怪獸產地-主規則.md` 的判定協定表格讀出 DC、修正值，計算各等第在各難度的成功率，
+從 `TetheredDice-rules/fantasticbeasts_trpg_gm/怪獸產地-主規則.md` 的判定協定表格讀出 DC、修正值，計算各等第在各難度的成功率，
 並檢查「AI 傾向擲出最大值」時，規則還能不能守住底線。調整規則裡的數字後，執行本腳本確認結果。
 
 用法：
@@ -19,7 +19,7 @@ from collections import Counter
 
 from common import ROOT, read_text, setup_console
 
-DEFAULT_PATH = ROOT / "偽隨機判定-rules" / "怪獸產地-主規則.md"
+DEFAULT_PATH = ROOT / "TetheredDice-rules" / "fantasticbeasts_trpg_gm" / "怪獸產地-主規則.md"
 LEVELS = ["未涉獵", "入門", "初學", "略通", "熟練", "專精", "精通"]
 ACTION_DC = ["簡單", "中階", "困難", "傳奇"]
 SOCIAL_DC = ["日常邀約", "涉入麻煩", "挺身冒險"]

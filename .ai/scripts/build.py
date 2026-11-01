@@ -36,8 +36,8 @@ FB = RULES / "FantasticBeasts_TRPG_rules"
 SRC_FB_MAIN = FB / "怪獸產地-主規則.md"
 SRC_FB_OPEN = FB / "怪獸產地-開局角卡.md"
 SRC_FB_DB = FB / "怪獸產地-檢索資料庫.md"
-# 偽隨機判定（Tethered Dice）實驗版規則，與 rules/ 同層級
-EXPERIMENT_DIR = ROOT / "偽隨機判定-rules"
+# 偽隨機判定（Tethered Dice）實驗版規則，與 rules/ 同層級（TetheredDice-rules/ 下以怪獸產地為子資料夾）
+EXPERIMENT_DIR = ROOT / "TetheredDice-rules" / "fantasticbeasts_trpg_gm"
 # Skill 共用的工具與協定（單一來源，會複製到每個 Skill 的 scripts/ 與 references/）
 SKILL_TOOLS = ROOT / ".ai" / "skill-tools"
 
@@ -682,13 +682,42 @@ SKILL_DIRS = {
     "fantasticbeasts": ROOT / "skills" / "fantasticbeasts_trpg_gm",
 }
 SKILL_REFERENCES = [
-    (SKILL_DIRS["general"] / "references" / "AI-TRPG-PC角色卡.md", SRC_GEN_PC),
     (SKILL_DIRS["hogwarts"] / "references" / "檢索資料庫1991.md", SRC_HOG_DB["1991"]),
     (SKILL_DIRS["hogwarts"] / "references" / "檢索資料庫1890.md", SRC_HOG_DB["1890"]),
-    (SKILL_DIRS["hogwarts"] / "references" / "開局角卡.md", SRC_HOG_OPEN),
     (SKILL_DIRS["hogwarts"] / "references" / "c821118擴充資料庫.md", SRC_HOG_EXT),
-    (SKILL_DIRS["fantasticbeasts"] / "references" / "開局角卡.md", SRC_FB_OPEN),
     (SKILL_DIRS["fantasticbeasts"] / "references" / "檢索資料庫.md", SRC_FB_DB),
+]
+
+# 「擲骰結果回報」只有 Skill 版有工具可談，來源（rules/）是唯讀且不含工具細節，所以只在轉成 Skill 時加入。
+# 加入的是 PC 可選的欄位，與一條規則：選了「回報」，GM 每回有判定時要在情節之前列出擲骰與公式計算。
+REPORT_FIELD_TEXT = "擲骰結果回報：(預設)不回報／回報（僅選「工具擲骰」時填寫）"
+REPORT_RULE_TEXT = (
+    "選「工具擲骰」者須同時選定GM是否回報擲骰結果，確認後不得由GM更改。"
+    "選「回報」時，GM每回輸出若有判定，須在情節敘事之前列出【擲骰回報】："
+    "判定事項與難度、工具的原始輸出、公式計算（骰值加修正值對照難度）與結果等第，格式見 `references/隨機與判定協定.md` 第五節；"
+    "未列出者視為尚未擲骰，不得直接寫出判定後的情節。選「不回報」時，以敘事呈現結果，PC要求時再公開。"
+)
+_RULES_END = "的觸發都不判定。"
+_FIELD_TOOL = "工具擲骰（需AI環境實際執行工具，可從介面確認）"
+
+
+def skill_card(src, label, numbered):
+    """回傳加入擲骰回報欄位與規則的角色卡。numbered=True 為通用版（編號規則、頂格欄位），否則為開局角卡（項目符號、縮排欄位）。"""
+    text = read_text(src)
+    field_line = next(l for l in text.split("\n") if _FIELD_TOOL in l)
+    indent = field_line[:len(field_line) - len(field_line.lstrip())]
+    pairs = [(field_line, field_line + "\n" + indent + "* " + REPORT_FIELD_TEXT)]
+    if numbered:
+        pairs.append(("嚴禁未呼叫工具卻宣稱已擲骰。", "嚴禁未呼叫工具卻宣稱已擲骰。\n6. " + REPORT_RULE_TEXT))
+    else:
+        pairs.append((_RULES_END, _RULES_END + "\n- 【擲骰回報】：" + REPORT_RULE_TEXT))
+    return adapt(text, pairs, label)
+
+
+SKILL_CARDS = [
+    (SKILL_DIRS["general"] / "references" / "AI-TRPG-PC角色卡.md", SRC_GEN_PC, True),
+    (SKILL_DIRS["hogwarts"] / "references" / "開局角卡.md", SRC_HOG_OPEN, False),
+    (SKILL_DIRS["fantasticbeasts"] / "references" / "開局角卡.md", SRC_FB_OPEN, False),
 ]
 # 每個 Skill 都附上同一份擲骰腳本與隨機協定（Skill 需能獨立搬移，所以複製而非引用）
 SKILL_REFERENCES += [(d / "scripts" / "roll.py", SKILL_TOOLS / "roll.py") for d in SKILL_DIRS.values()]
@@ -728,10 +757,12 @@ def generate():
     out[ROOT / "chub" / "general_TRPG_gm.json"] = dump_json(general_card())
     out[ROOT / FB_CFG["card"]] = dump_json(fb_card())
     out[ROOT / FB_CFG["lore"]] = dump_json(fb_lorebook())
-    # 偽隨機判定-rules（實驗版）的主規則與開局角卡是手動維護的分支；檢索資料庫與 rules 版完全相同，由腳本複製
+    # TetheredDice-rules（實驗版）的主規則與開局角卡是手動維護的分支；檢索資料庫與 rules 版完全相同，由腳本複製
     out[EXPERIMENT_DIR / SRC_FB_DB.name] = read_text(SRC_FB_DB)
     for dest, src in SKILL_REFERENCES:
         out[dest] = read_text(src)
+    for dest, src, numbered in SKILL_CARDS:
+        out[dest] = skill_card(src, f"skill:{dest.parent.parent.name}", numbered)
     for skill_dir in SKILL_DIRS.values():
         out[skill_dir / "SKILL.md"] = sync_skill(skill_dir / "SKILL.md")
     return out
