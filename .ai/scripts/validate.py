@@ -302,7 +302,8 @@ def check_roll_tool():
     for skill_dir in build.SKILL_DIRS.values():
         script = skill_dir / "scripts" / "roll.py"
         name = skill_dir.name
-        runs = [["check", "--dc", "12", "--mod", "2"], ["dice", "2d6+1"], ["pick", "甲", "乙", "丙"],
+        runs = [["check", "--dc", "12", "--mod", "2"], ["check", "--dc", "12", "--mod", "2", "--mode", "adv"],
+                ["check", "--dc", "12", "--mod", "2", "--mode", "dis"], ["dice", "2d6+1"], ["pick", "甲", "乙", "丙"],
                 ["alloc", "--items", "a,b,c,d,e,f,g,h,i,j,k,l", "--cap", "熟練", "--max-at-cap", "1", "--min-low", "3"]]
         for argv in runs:
             r = subprocess.run([sys.executable, "-I", str(script), "--json", *argv], capture_output=True,
@@ -311,13 +312,39 @@ def check_roll_tool():
                 err(f"{name}: roll.py {' '.join(argv[:1])} 執行失敗：{r.stderr.strip()[:80]}")
                 continue
             data = json.loads(r.stdout)
+            if argv[0] == "check":
+                if data["result"] not in ("大成功", "成功", "部分成功", "失敗", "大失敗") or data["margin"] != data["total"] - data["dc"]:
+                    err(f"{name}: roll.py check 的等級或差值不一致：{data}")
+                if (data["natural"] == 20) != (data["result"] == "大成功") or (data["natural"] == 1) != (data["result"] == "大失敗"):
+                    err(f"{name}: roll.py check 的天然 20／1 與等級不一致：{data}")
+                if (len(data["rolled"]) == 2) != (data["mode"] != "normal"):
+                    err(f"{name}: roll.py check 的順勢／逆勢骰數不符：{data}")
+                text_out = subprocess.run([sys.executable, "-I", str(script), "check", "--dc", "12"], capture_output=True,
+                                          text=True, encoding="utf-8").stdout
+                if "差 =" not in text_out or "等級 =" not in text_out:
+                    err(f"{name}: roll.py check 的輸出缺少固定格式（差 =、等級 =）：{text_out.strip()[:60]}")
             if argv[0] == "alloc":
                 vals = list(data["allocation"].values())
                 if sum(v in ("未涉獵", "入門") for v in vals) < 3 or vals.count("熟練") > 1 or any(
                         data["levels"].index(v) > data["levels"].index("熟練") for v in vals):
                     err(f"{name}: roll.py alloc 的結果違反限制：{vals}")
+    # 等級邊界：天然 20／1 優先於差值；其餘三級以差值分
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("roll_under_test", build.SKILL_TOOLS / "roll.py")
+    roll = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(roll)
+    expect = [((-20, 20), "大成功"), ((20, 1), "大失敗"), ((4, None), "成功"), ((0, None), "成功"), ((-1, None), "部分成功"),
+              ((-3, None), "部分成功"), ((-4, None), "失敗"), ((-7, None), "失敗"), ((-8, None), "失敗"), ((9, 15), "成功")]
+    for (margin, nat), want in expect:
+        got = roll.grade(margin, nat)
+        if got != want:
+            err(f"roll.py grade(差={margin}, 天然={nat}) 應為「{want}」，實際為「{got}」")
+    # 舊用語不得殘留
+    for path in list((ROOT / "skills").rglob("*.md")) + list(build.SKILL_TOOLS.glob("*.md")):
+        if "勉強成功" in read_text(path):
+            err(f"{path.relative_to(ROOT).as_posix()} 仍有舊用語「勉強成功」，應為「部分成功」")
     if len(errors) == start:
-        ok("三個 Skill 的 roll.py 皆可執行，alloc 結果符合限制")
+        ok("三個 Skill 的 roll.py 皆可執行，等級邊界與 alloc 結果符合限制")
 
 
 def tokens_of(text):

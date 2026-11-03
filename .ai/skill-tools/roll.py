@@ -7,12 +7,14 @@
 用法（以 Skill 資料夾為工作目錄）：
   python scripts/roll.py dice 1d20                    擲骰，支援 NdM±K，例：2d6+1
   python scripts/roll.py check --dc 12 --mod 2        d20 判定：d20＋修正對照難度
+                              [--mode adv|dis]         順勢（2d20 取高）／逆勢（2d20 取低）
   python scripts/roll.py pick 選項A 選項B 選項C       從選項抽 1 個；--count 2 抽 2 個不重複
   python scripts/roll.py alloc --items 項目1,項目2,… --cap 略通 --min-low 3
                                                        在上限內隨機分配等第（見下）
   加上 --json 輸出 JSON，--quiet 只輸出結果行。
 
-check 的結果分級：超過難度 5 以上＝大成功；達到難度＝成功；差 1 至 3＝勉強成功；差 4 以上＝失敗。
+check 的結果分級：被採用的那顆 d20 天然 20＝大成功、天然 1＝大失敗（不論修正值與難度）；
+其餘依差（總和－難度）：差 0 以上＝成功；差 -1 至 -3＝部分成功；差 -4 以下＝失敗。
 
 alloc 參數：
   --items       以逗號分隔的項目（例如魔法專業科目）
@@ -58,24 +60,40 @@ def cmd_dice(args):
     return line, {"expr": args.expr, "rolls": rolls, "modifier": mod, "total": total}
 
 
-def grade(margin):
-    if margin >= 5:
+def grade(margin, natural=None):
+    """天然 20／1（單顆 d20）優先，不論修正值與難度；其餘依差值（總和 - 難度）分三級。"""
+    if natural == 20:
         return "大成功"
+    if natural == 1:
+        return "大失敗"
     if margin >= 0:
         return "成功"
     if margin >= -3:
-        return "勉強成功"
+        return "部分成功"
     return "失敗"
 
 
+MODE_LABEL = {"normal": "", "adv": "2d20 取高", "dis": "2d20 取低"}
+
+
 def cmd_check(args):
-    die = _rng.randrange(1, 21)
+    if args.mode == "normal":
+        dice = [_rng.randrange(1, 21)]
+        die = dice[0]
+    else:
+        dice = [_rng.randrange(1, 21), _rng.randrange(1, 21)]
+        die = max(dice) if args.mode == "adv" else min(dice)
     total = die + args.mod
     margin = total - args.dc
-    result = grade(margin)
-    line = f"d20={die} {args.mod:+d} = {total} vs 難度 {args.dc} → {result}（差 {margin:+d}）"
-    return line, {"d20": die, "modifier": args.mod, "total": total, "dc": args.dc,
-                  "margin": margin, "result": result}
+    result = grade(margin, die)
+    shown = f"{die}（{MODE_LABEL[args.mode]}：{dice[0]}、{dice[1]}）" if len(dice) == 2 else str(die)
+    line = (f"d20 = {shown}，修正 = {args.mod:+d}，總和 = {total}，難度 = {args.dc}，"
+            f"差 = {margin:+d}，等級 = {result}")
+    natural = die if die in (1, 20) else None
+    if natural:
+        line += f"（天然 {natural}）"
+    return line, {"d20": die, "rolled": dice, "mode": args.mode, "natural": natural, "modifier": args.mod,
+                  "total": total, "dc": args.dc, "margin": margin, "result": result}
 
 
 def cmd_pick(args):
@@ -123,6 +141,8 @@ def main():
     p = sub.add_parser("check")
     p.add_argument("--dc", type=int, required=True, help="難度")
     p.add_argument("--mod", type=int, default=0, help="修正值")
+    p.add_argument("--mode", choices=["normal", "adv", "dis"], default="normal",
+                   help="normal＝1d20；adv＝順勢（2d20 取高）；dis＝逆勢（2d20 取低）")
     p.set_defaults(fn=cmd_check)
 
     p = sub.add_parser("pick")

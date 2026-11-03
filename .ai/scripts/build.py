@@ -697,6 +697,13 @@ REPORT_RULE_TEXT = (
     "判定事項與難度、工具的原始輸出、公式計算（骰值加修正值對照難度）與結果等第，格式見 `references/隨機與判定協定.md` 第五節；"
     "未列出者視為尚未擲骰，不得直接寫出判定後的情節。選「不回報」時，以敘事呈現結果，PC要求時再公開。"
 )
+# general 版沒有預設變數（維持輕便），創角時由 PC 與 GM 自訂；規則細節在 general SKILL.md 的「主題變數」。
+VARIABLE_FIELD_TEXT = "主題變數：(預設)無／自訂（至少可加3個；格式：七級正數／七級正負數／單一標籤；變數越多，上下文越長）"
+VARIABLE_RULE_TEXT = (
+    "填寫「主題變數」時，GM依主題建議可追蹤的變數，至少可加3個、不設上限，PC也可以不加。"
+    "每個變數選一種格式：七級正數（1至7）、七級正負數（-3至+3）、單一標籤（一句文字，無等級）。"
+    "GM須提醒PC：變數越多，每回要處理的上下文越長，建議從少量開始。確認後視為PC設定，運用規則見 SKILL.md 的「主題變數」。"
+)
 _RULES_END = "的觸發都不判定。"
 _FIELD_TOOL = "工具擲骰（需AI環境實際執行工具，可從介面確認）"
 
@@ -708,7 +715,9 @@ def skill_card(src, label, numbered):
     indent = field_line[:len(field_line) - len(field_line.lstrip())]
     pairs = [(field_line, field_line + "\n" + indent + "* " + REPORT_FIELD_TEXT)]
     if numbered:
-        pairs.append(("嚴禁未呼叫工具卻宣稱已擲骰。", "嚴禁未呼叫工具卻宣稱已擲骰。\n6. " + REPORT_RULE_TEXT))
+        pairs.append(("嚴禁未呼叫工具卻宣稱已擲骰。",
+                      "嚴禁未呼叫工具卻宣稱已擲骰。\n6. " + REPORT_RULE_TEXT + "\n7. " + VARIABLE_RULE_TEXT))
+        pairs.append(("* PC對TRPG的期待：", "* " + VARIABLE_FIELD_TEXT + "\n* PC對TRPG的期待："))
     else:
         pairs.append((_RULES_END, _RULES_END + "\n- 【擲骰回報】：" + REPORT_RULE_TEXT))
     return adapt(text, pairs, label)
