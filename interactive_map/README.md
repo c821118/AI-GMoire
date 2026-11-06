@@ -6,7 +6,7 @@
 interactive_map/
 ├── SKILL.md                      ← 規範：原則、流程、資料格式、不捏造規則
 ├── references/map-template.html  ← 固定的繪製引擎 + 一段資料區塊（GM 只改資料）
-└── references/icons.md           ← 圖示風格規格 + 51 個地點圖示庫（Tabler 風格線條圖示）
+└── references/icons.md           ← 圖示風格規格 + 66 個地點圖示庫（Tabler 風格線條圖示）
 ```
 
 ## 設計重點
