@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<!--
+  圖示說明：本檔圖示為 24×24 的線條圖示；部分取自 Tabler Icons (https://tabler.io/icons)，其餘為本專案自繪。
+  Tabler Icons — MIT License — Copyright (c) 2020-2026 Paweł Kuna
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>互動地圖</title>
+<style>
+/* 版面：全螢幕一張圖；左上標題章、上方階段籤、右下縮放鈕、左下比例尺與圖例；地點卡片桌面從右側滑入、手機從底部升起。 */
+:root{
+  --fog:#c9c6b4;--land:#ebe5cf;--ink:#2b2822;--ink-soft:#6b6455;--water:#4f8494;--mount:#6d8a63;
+  --route:#b23a2c;--plan:#a77a22;--panel:#f4efdd;--line:rgba(43,40,34,.18);--halo:#ebe5cf;
+  --font-display:"LXGW WenKai TC","Kaiti TC","STKaiti","KaiTi","BiauKai","DFKai-SB",serif;
+  --font-body:"Noto Serif TC","Source Han Serif TC","Songti TC","PMingLiU","Georgia",serif;
+  color-scheme:light}
+@media (prefers-color-scheme:dark){:root{
+  --fog:#15171a;--land:#24272b;--ink:#e7dfc9;--ink-soft:#a39a86;--water:#6ea8b6;--mount:#86a37c;
+  --route:#e46a54;--plan:#d6aa4e;--panel:#1d2024;--line:rgba(231,223,201,.16);--halo:#24272b;color-scheme:dark}}
+
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--fog);color:var(--ink);font:14px var(--font-body);overflow:hidden}
+#app{position:fixed;inset:0;overflow:hidden}
+#map{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#map.dragging{cursor:grabbing}
+
+.top{position:absolute;top:0;left:0;right:0;z-index:5;pointer-events:none;
+  padding-top:calc(12px + env(safe-area-inset-top,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:8px}
+.seal{pointer-events:auto;align-self:flex-start;display:flex;align-items:center;gap:10px;
+  background:var(--panel);border:1px solid var(--line);padding:6px 12px 6px 6px;border-radius:3px;max-width:100%}
+.seal b{display:grid;place-items:center;width:34px;height:34px;background:var(--route);color:var(--panel);
+  font:700 13px/1.05 var(--font-display);writing-mode:vertical-rl;letter-spacing:1px;border-radius:2px;flex:none}
+.seal h1{margin:0;font:700 18px/1.2 var(--font-display);letter-spacing:2px}
+.seal p{margin:1px 0 0;font-size:12px;color:var(--ink-soft)}
+.chips{pointer-events:auto;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;max-width:100%}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;font:400 14px/1 var(--font-display);color:var(--ink);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:9px 13px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.chips button.plan{color:var(--plan);border-style:dashed}
+.chips button.plan[aria-pressed="true"]{background:var(--plan);color:var(--panel);border-style:solid}
+.chips button:focus-visible,.ctl button:focus-visible,.card button:focus-visible,.legend-t:focus-visible{outline:2px solid var(--route);outline-offset:2px}
+.caption{pointer-events:none;align-self:flex-start;font:400 13px/1.4 var(--font-display);color:var(--ink);
+  background:color-mix(in srgb,var(--panel) 88%,transparent);padding:4px 10px;border-radius:3px;max-width:100%}
+.caption:empty{display:none}
+
+.ctl{position:absolute;z-index:5;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px}
+.ctl button{width:44px;height:44px;display:grid;place-items:center;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line);border-radius:4px;font:600 20px/1 var(--font-body);cursor:pointer}
+.ctl button svg{width:18px;height:18px}
+
+.foot{position:absolute;z-index:4;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  display:flex;flex-direction:column;gap:8px;align-items:flex-start;max-width:calc(100% - 90px)}
+.scale{font:12px/1 var(--font-display);color:var(--ink);display:flex;align-items:center;gap:6px}
+.scale i{display:block;height:6px;border:1.5px solid var(--ink);border-top:0}
+.legend{background:var(--panel);border:1px solid var(--line);border-radius:4px;font-size:12px}
+.legend-t{all:unset;cursor:pointer;display:block;padding:9px 12px;font:400 13px/1 var(--font-display)}
+.legend ul{list-style:none;margin:0;padding:0 12px 6px;display:grid;gap:5px}
+.legend li{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.legend svg{width:26px;height:14px;flex:none}
+.legend p{margin:0;padding:0 12px 9px;font-size:11px;color:var(--ink-soft);max-width:230px;white-space:normal}
+
+.card{position:absolute;z-index:6;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+  top:120px;right:max(16px,env(safe-area-inset-right,0px));width:320px;max-height:calc(100% - 200px);overflow:auto;
+  border-radius:4px;padding:16px 18px 18px;box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.card .x{position:absolute;top:6px;right:6px;width:40px;height:40px;border:0;background:none;color:var(--ink-soft);font-size:22px;cursor:pointer;border-radius:3px}
+.card .tag{display:inline-block;font:400 12px/1 var(--font-display);padding:4px 7px;border-radius:2px;border:1px solid currentColor}
+.card .tag.v{color:var(--ink)}.card .tag.c{color:var(--route)}.card .tag.h{color:var(--ink-soft);border-style:dashed}.card .tag.p{color:var(--plan);border-style:dashed}
+.card h2{margin:10px 0 2px;font:700 22px/1.25 var(--font-display);letter-spacing:1px;text-wrap:balance;padding-right:30px}
+.card .now{margin:0 0 10px;font-size:12px;color:var(--ink-soft)}
+.card .ch{font:400 13px/1.5 var(--font-display);color:var(--route);margin:0 0 8px}
+.card .d{margin:0;font-size:14.5px;line-height:1.75}
+@media (max-width:640px){
+  .card{top:auto;left:0;right:0;bottom:0;width:auto;max-height:46%;border-radius:10px 10px 0 0;
+    padding:18px max(18px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+  .seal h1{font-size:16px}.seal p{font-size:11px}
+  body.card-open .ctl,body.card-open .foot{visibility:hidden}
+}
+
+/* SVG：地形 */
+.fogtex{fill:var(--fog)}
+.landfill{fill:var(--land)}
+.grid line{stroke:var(--ink);stroke-opacity:.07;stroke-width:1}
+.riv{fill:none;stroke:var(--water);stroke-linecap:round;stroke-linejoin:round}
+.riv-bank{fill:none;stroke:var(--water);stroke-opacity:.18;stroke-linecap:round;stroke-linejoin:round}
+.sea{fill:var(--water);fill-opacity:.2;stroke:var(--water);stroke-opacity:.55;stroke-width:1.2;stroke-linejoin:round}
+.marsh{fill:var(--water);fill-opacity:.12;stroke:var(--water);stroke-opacity:.3;stroke-dasharray:2 3}
+.mtn{fill:var(--mount);fill-opacity:.35;stroke:var(--mount);stroke-width:1;stroke-linejoin:round}
+.tree{fill:var(--mount);fill-opacity:.28;stroke:var(--mount);stroke-opacity:.8;stroke-width:.8;stroke-linejoin:round}
+.hill{fill:none;stroke:var(--mount);stroke-opacity:.75;stroke-width:1.1;stroke-linecap:round}
+.dune{fill:none;stroke:var(--plan);stroke-opacity:.6;stroke-width:1;stroke-linecap:round}
+.bound{fill:none;stroke:var(--ink-soft);stroke-opacity:.6;stroke-dasharray:7 4 1.5 4;stroke-width:1.2}
+.wall{fill:none;stroke:var(--ink);stroke-opacity:.55;stroke-width:1.2}
+.road{fill:none;stroke:var(--ink-soft);stroke-opacity:.6;stroke-width:1;stroke-dasharray:1 3;stroke-linecap:round}
+.coast{fill:none;stroke:var(--water);stroke-opacity:.6;stroke-width:1.2;stroke-linejoin:round}
+/* SVG：路線（玩家走過的路） */
+.rt{fill:none;stroke:var(--route);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;transition:stroke-opacity .25s}
+.rt.dash{stroke-dasharray:6 4}
+.rt.dot{stroke-dasharray:2 4;stroke-width:2}
+.rt.plan{stroke:var(--plan);stroke-dasharray:3 6}
+.rt.dim{stroke-opacity:.18}
+.rt.hi{stroke-width:3.6}
+/* SVG：文字與地點標記（疊層，不隨縮放變大） */
+.lbl{font-family:var(--font-display);fill:var(--ink);paint-order:stroke;stroke:var(--halo);stroke-width:3.5px;stroke-linejoin:round;pointer-events:none}
+.lbl.geo{fill:var(--ink-soft);font-size:13px;letter-spacing:3px}
+.lbl.riverl{fill:var(--water);font-size:13px;letter-spacing:4px}
+.lbl.mtnl{fill:var(--mount);font-size:12px;letter-spacing:3px}
+.lbl.fogl{fill:var(--ink-soft);opacity:.55;stroke:none;font-size:14px;letter-spacing:8px}
+.lbl.region{fill:var(--ink-soft);font-size:15px;letter-spacing:6px;opacity:.8}
+.mk{cursor:pointer}
+.mk .hit{fill:transparent}
+.mk:focus{outline:none}.mk:focus-visible .bk{stroke:var(--route);stroke-width:3}
+.mk.dot .hit{transform:scale(.45)}
+.mk text{font-family:var(--font-display);font-size:14px;fill:var(--ink);paint-order:stroke;stroke:var(--halo);stroke-width:3.5px;stroke-linejoin:round}
+.mk .bk{fill:var(--land);stroke:var(--ink);stroke-width:1.5}
+.mk .ic{fill:none;stroke:var(--ink)}
+.mk .ic *{fill:none;stroke:inherit;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.mk.c .bk{fill:var(--route);stroke:var(--route)}.mk.c .ic{stroke:var(--panel)}.mk.c text{fill:var(--route);font-weight:700}
+.mk.h .bk{stroke:var(--ink-soft);stroke-dasharray:2.5 2}.mk.h .ic{stroke:var(--ink-soft)}.mk.h text{fill:var(--ink-soft)}
+.mk.p .bk{stroke:var(--plan);stroke-width:1.8;stroke-dasharray:3 2}.mk.p .ic{stroke:var(--plan)}.mk.p text{fill:var(--plan)}
+.mk.edge text{font-size:12.5px}
+.mk.dot text,.mk.dot .ic{display:none}
+.mk.dot .bk{transform:scale(.4);transform-box:fill-box;transform-origin:center;stroke-width:3.5}
+.mk.dim{opacity:.28}
+.mk.sel .bk{stroke-width:2.6}
+.pulse{fill:none;stroke:var(--route);stroke-width:1.6;animation:pulse 2.2s ease-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2.4);opacity:0}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none;opacity:.6}}
+</style>
+</head>
+<body>
+<div id="app">
+  <svg id="map" role="img">
+    <defs>
+      <filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="13"/></filter>
+      <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .06 0"/></filter>
+      <mask id="reveal" maskUnits="userSpaceOnUse"><g id="revealG" filter="url(#blur)"></g></mask>
+    </defs>
+    <rect class="fogtex" x="-5000" y="-5000" width="10000" height="10000"/>
+    <rect x="-5000" y="-5000" width="10000" height="10000" filter="url(#grain)" fill="#000"/>
+    <g id="world">
+      <g id="known" mask="url(#reveal)">
+        <rect id="landRect" class="landfill"/>
+        <g id="base"></g>
+        <g id="terrain"></g>
+      </g>
+      <g id="grid" class="grid"></g>
+      <g id="routes"></g>
+    </g>
+    <g id="overlay"></g>
+  </svg>
+
+  <div class="top">
+    <div class="seal"><b id="seal"></b><div><h1 id="title"></h1><p id="sub"></p></div></div>
+    <div class="chips" id="chips" role="group" aria-label="依階段檢視"></div>
+    <div class="caption" id="caption"></div>
+  </div>
+
+  <div class="foot">
+    <div class="scale" id="scale" aria-hidden="true"><i id="scaleBar"></i><span id="scaleTxt"></span></div>
+    <div class="legend">
+      <button class="legend-t" id="legendT" aria-expanded="true">圖例 ▾</button>
+      <div id="legendB"><ul id="legendL"></ul><p id="legendN"></p></div>
+    </div>
+  </div>
+
+  <div class="ctl">
+    <button id="zin" aria-label="放大">+</button>
+    <button id="zout" aria-label="縮小">−</button>
+    <button id="zfit" aria-label="回到全圖"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4"/></svg></button>
+  </div>
+
+  <aside class="card" id="card" hidden aria-live="polite">
+    <button class="x" id="cardX" aria-label="關閉">×</button>
+    <div id="cardTags"></div>
+    <h2 id="cardH"></h2>
+    <p class="now" id="cardNow"></p>
+    <p class="ch" id="cardCh"></p>
+    <p class="d" id="cardD"></p>
+  </aside>
+</div>
+
+<script>
+/* ==========================================================================
+   DATA-START ── 更新地圖時只改這一段。一個項目一行，新項目加在各陣列最後面。
+   座標：x 向右、y 向下，單位為「世界座標」，全圖寬約 900～1200。
+   下面是示範資料（虛構的「霧原谷地」），建立真正的地圖時必須全部換掉。
+   ========================================================================== */
+const MAP={
+meta:{
+  title:"（範例）霧原谷地行跡圖",          // 標題
+  sub:"第二章終 · 鐘樓鎮",                // 目前狀態一行：階段、時間、所在
+  seal:"輿圖",                          // 標題章上的字（1～2 字）
+  bounds:[0,0,900,520],                 // 全圖範圍 [x0,y0,x1,y1]，「回到全圖」與初始視野用
+  viewPhone:[250,150,760,420],          // 選填：手機初始視野 [x0,y0,x1,y1]
+  scale:{n:10,u:"公里",len:60},         // 選填：比例尺，n 個單位 = len 世界座標長度；省略則不畫比例尺與方格
+  grid:true,                            // 選填：依比例尺畫方格（每格 n 個單位）
+  seed:7,                               // 隨機種子（樹、山的位置），建立後不要改
+  reveal:1,                             // 選填：迷霧揭開範圍倍率
+  seen:[{x:712,y:166,r:62},{x:290,y:325,r:52}], // 選填：遠望過但沒到過的範圍 {x,y,r}（顯示較淡）
+  legend:{solid:"河道航行",dash:"陸路",plan:"擬走路線"}, // 選填：圖例文字（路線類型與地點狀態皆可改）
+  note:"示意圖，方位與距離為約略，以劇情為準。"        // 選填：圖例底部小字
+  // theme:{route:"#b23a2c",land:"#ebe5cf"}, themeDark:{...}  選填：覆寫配色，見 SKILL.md
+  // base:{href:"圖片網址",x:0,y:0,w:900,h:520,o:1}           選填：只有玩家提供圖片時才用
+},
+chapters:[ // id、簡稱 s、名稱 n、標題 t、時間 w；plan:true 表示「下一步」；f 選填：該階段的視野 [x0,y0,x1,y1]
+ {id:1,s:"一",n:"第一章",t:"離開起點村",w:"春初"},
+ {id:2,s:"二",n:"第二章",t:"渡河與鐘樓鎮",w:"春末"},
+ {id:3,s:"下一步",n:"下一步",t:"順河前往鹽港（尚未啟程）",w:"",plan:true}
+],
+terrain:[ // k：sea water marsh forest hills desert ridge river line path；見 SKILL.md
+ {k:"river",id:"main",w:2.4,pts:[[0,180],[70,190],[130,200],[210,238],[300,262],[370,290],[430,298],[500,292],[560,288],[640,310],[720,332],[800,350],[900,372]]},
+ {k:"river",id:"branch",w:1.2,pts:[[380,30],[392,110],[410,200],[430,298]]},
+ {k:"ridge",id:"north",a:[650,150],b:[770,185],s:3.6},
+ {k:"forest",id:"wood",pts:[[245,290],[335,292],[345,340],[290,365],[240,335]]},
+ {k:"marsh",id:"fen",cx:470,cy:322,rx:44,ry:15,rot:-6},
+ {k:"water",id:"lake",pts:[[556,396],[618,386],[652,402],[622,420],[570,418]]},
+ {k:"line",id:"border",cls:"boundary",pts:[[520,210],[506,260],[498,335]]}
+],
+routes:[ // ch：階段；m：solid 實線 / dash 虛線 / dot 點線 / plan 擬行；from、to、along(沿某條 river) 或 pts
+ {ch:1,m:"solid",from:"start",to:"ferry",along:"main"},
+ {ch:2,m:"solid",from:"ferry",to:"bridge",along:"main"},
+ {ch:2,m:"solid",from:"bridge",to:"town",along:"main"},
+ {ch:2,m:"dash",from:"town",to:"cave",via:[[572,330]]},
+ {ch:3,m:"plan",from:"town",to:"saltport",along:"main"}
+],
+places:[ // s：c 現在所在 / v 到訪 / h 耳聞未至 / p 擬往；t：圖示種類（要在 icons 裡有同名圖示，edge 例外）；pos：標籤位置 l r t b；now：一句位置；d：說明
+ {id:"start",n:"起點村",x:130,y:196,s:"v",t:"village",ch:[1],pos:"t",now:"河上游的小村",d:"（示範）旅程從這裡開始。"},
+ {id:"ferry",n:"老渡口",x:300,y:262,s:"v",t:"port",ch:[1,2],pos:"b",now:"河道南岸",d:"（示範）在此換了渡船。"},
+ {id:"bridge",n:"石橋",x:430,y:298,s:"v",t:"bridge",ch:[2],pos:"b",now:"支流匯入處",d:"（示範）橋下是兩條河的交會。"},
+ {id:"town",n:"鐘樓鎮",x:560,y:288,s:"c",t:"town",ch:[2,3],pos:"t",now:"今所在",d:"（示範）鎮中央有座鐘樓，今晚在此過夜。"},
+ {id:"cave",n:"潮濕洞窟",x:588,y:366,s:"v",t:"cave",ch:[2],pos:"r",now:"鎮南小徑盡頭",d:"（示範）洞口濕滑，只探到入口。"},
+ {id:"fort",n:"舊要塞",x:700,y:200,s:"h",t:"fort",ch:[2],pos:"r",now:"耳聞 · 在東北",d:"（示範）鎮民說山腰上有座廢棄要塞，尚未親眼見過。"},
+ {id:"capital",n:"↑ 王都",x:380,y:14,s:"h",t:"edge",ch:[1],pos:"b",now:"耳聞 · 在北",d:"（示範）旅人口中的王都，遠在圖外。"},
+ {id:"saltport",n:"鹽港",x:860,y:363,s:"p",t:"port",ch:[3],pos:"t",now:"擬往 · 河口",d:"（示範）打算順河前往的港口，尚未啟程。"}
+],
+labels:[ // cls：riverl 河 / mtnl 山 / geo 地名 / region 區域 / fogl 未知；rot 旋轉；minK、maxK 縮放門檻；ch 選填
+ {t:"霧　河",x:210,y:216,cls:"riverl",rot:22},
+ {t:"北嶺",x:712,y:136,cls:"mtnl"},
+ {t:"未　詳",x:420,y:470,cls:"fogl"}
+],
+icons:{ // 只放這張圖用到的圖示：24×24 線條圖示片段，從 references/icons.md 複製；新增地點種類時在這裡加一行
+ village:'<path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/>',
+ port:'<path d="M12 9v12m-8 -8a8 8 0 0 0 16 0m1 0h-2m-14 0h-2"/><path d="M9 6a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>',
+ bridge:'<path d="M6 5l0 14"/><path d="M18 5l0 14"/><path d="M2 15l20 0"/><path d="M3 8a7.5 7.5 0 0 0 3 -2a6.5 6.5 0 0 0 12 0a7.5 7.5 0 0 0 3 2"/><path d="M12 10l0 5"/>',
+ town:'<path d="M8 9l5 5v7h-5v-4m0 4h-5v-7l5 -5m1 1v-6a1 1 0 0 1 1 -1h10a1 1 0 0 1 1 1v17h-8"/><path d="M13 7l0 .01"/><path d="M17 7l0 .01"/><path d="M17 11l0 .01"/><path d="M17 15l0 .01"/>',
+ cave:'<path d="M3 20v-5a9 9 0 0 1 18 0v5"/><path d="M8 20v-3a4 4 0 0 1 8 0v3"/><path d="M2 20h20"/>',
+ fort:'<path d="M7 21h1a1 1 0 0 0 1 -1v-1a3 3 0 0 1 6 0m3 2h1a1 1 0 0 0 1 -1v-15l-3 -2l-3 2v6h-4v-6l-3 -2l-3 2v15a1 1 0 0 0 1 1h2m8 -2v1a1 1 0 0 0 1 1h2"/><path d="M7 7v.01"/><path d="M7 10v.01"/><path d="M7 13v.01"/><path d="M17 7v.01"/><path d="M17 10v.01"/><path d="M17 13v.01"/>'
+}
+
+};
+/* DATA-END ================================================================ */
+
+/* ENGINE：繪製程式，固定不改。 */
+(function(){
+"use strict";
+const NS="http://www.w3.org/2000/svg",$=id=>document.getElementById(id);
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+const M=MAP.meta||{},CHS=MAP.chapters||[],TERR=MAP.terrain||[],PLS=MAP.places||[],RTS=MAP.routes||[],LBS=MAP.labels||[];
+const warn=(...a)=>console.warn("[map]",...a);
+const NSS={"vector-effect":"non-scaling-stroke"};
+const f1=n=>(+n).toFixed(1);
+const dark=matchMedia("(prefers-color-scheme: dark)").matches;
+const TH=dark?M.themeDark:M.theme;
+if(TH)for(const k in TH)document.documentElement.style.setProperty(k.startsWith("--")?k:"--"+k,TH[k]);
+document.title=M.title||"地圖";
+$("title").textContent=M.title||"地圖";$("sub").textContent=M.sub||"";$("seal").textContent=M.seal||"地圖";
+$("map").setAttribute("aria-label",M.title||"地圖");
+
+/* ---------- 工具 ---------- */
+const hash=s=>{let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0};
+const rng=s=>{let a=hash(s)%2147483646+1;return()=>(a=(a*16807)%2147483647)/2147483647};
+function smooth(p){ // Catmull-Rom → 三次貝茲
+  if(p.length<2)return"";
+  let d=`M${f1(p[0][0])},${f1(p[0][1])}`;
+  for(let i=0;i<p.length-1;i++){const a=p[i-1]||p[i],b=p[i],c=p[i+1],e=p[i+2]||c;
+    d+=`C${f1(b[0]+(c[0]-a[0])/6)},${f1(b[1]+(c[1]-a[1])/6)} ${f1(c[0]-(e[0]-b[0])/6)},${f1(c[1]-(e[1]-b[1])/6)} ${f1(c[0])},${f1(c[1])}`}
+  return d}
+function smoothC(p){ // 封閉曲線
+  const n=p.length;if(n<3)return"";let d=`M${f1(p[0][0])},${f1(p[0][1])}`;
+  for(let i=0;i<n;i++){const a=p[(i-1+n)%n],b=p[i],c=p[(i+1)%n],e=p[(i+2)%n];
+    d+=`C${f1(b[0]+(c[0]-a[0])/6)},${f1(b[1]+(c[1]-a[1])/6)} ${f1(c[0]-(e[0]-b[0])/6)},${f1(c[1]-(e[1]-b[1])/6)} ${f1(c[0])},${f1(c[1])}`}
+  return d+"Z"}
+const poly=(p,closed)=>"M"+p.map(q=>f1(q[0])+","+f1(q[1])).join("L")+(closed?"Z":"");
+const inPoly=(x,y,P)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const[xi,yi]=P[i],[xj,yj]=P[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c};
+function scatter(P,step,r,fn){ // 在多邊形內抖動取點
+  const xs=P.map(q=>q[0]),ys=P.map(q=>q[1]);let n=0,row=0;
+  for(let y=Math.min(...ys);y<=Math.max(...ys)&&n<700;y+=step,row++)
+    for(let x=Math.min(...xs)+(row%2)*step/2;x<=Math.max(...xs);x+=step){
+      const px=x+(r()-.5)*step*.7,py=y+(r()-.5)*step*.7;if(inPoly(px,py,P)){fn(px,py);n++}}}
+const nearest=(arr,p)=>{let bi=0,bd=1e18;arr.forEach((q,i)=>{const d=(q[0]-p[0])**2+(q[1]-p[1])**2;if(d<bd){bd=d;bi=i}});return bi};
+function distSeg(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/L));return Math.hypot(x-(a[0]+t*dx),y-(a[1]+t*dy))}
+
+/* ---------- 資料整理 ---------- */
+const byId={};PLS.forEach(p=>{if(byId[p.id])warn("重複的地點 id",p.id);byId[p.id]=p});
+const pos=r=>typeof r==="string"?(byId[r]?[byId[r].x,byId[r].y]:(warn("找不到地點",r),null)):r;
+const RIV={};TERR.forEach(t=>{if(t.k==="river"&&t.id)RIV[t.id]=t.pts});
+function along(id,a,b){
+  const arr=RIV[id];if(!arr){warn("找不到河",id);return[a,b]}
+  const ia=nearest(arr,a),ib=nearest(arr,b);
+  const s=(ia<=ib?arr.slice(ia,ib+1):arr.slice(ib,ia+1).reverse()).slice(1,-1);return[a,...s,b]}
+const RT=RTS.map(r=>{
+  let pts;
+  if(r.from&&r.to){const a=pos(r.from),b=pos(r.to);if(!a||!b)return null;
+    pts=r.along?along(r.along,a,b):[a,...(r.via||[]).map(pos),b]}
+  else pts=(r.pts||[]).map(pos);
+  pts=pts.filter(Boolean);
+  return pts.length>1?{...r,pts,ch:[].concat(r.ch==null?[]:r.ch)}:null}).filter(Boolean);
+PLS.forEach(p=>{p.ch=[].concat(p.ch==null?[]:p.ch)});
+
+/* ---------- 地圖範圍、方格、比例尺 ---------- */
+const allPts=[];PLS.forEach(p=>allPts.push([p.x,p.y]));RT.forEach(r=>allPts.push(...r.pts));
+function bboxOf(list){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;list.forEach(([x,y])=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)});return[x0,y0,x1,y1]}
+const BB=M.bounds||(allPts.length?bboxOf(allPts):[0,0,900,520]);
+const boxPts=b=>[[b[0],b[1]],[b[2],b[3]]];
+const SC=M.scale&&M.scale.n&&M.scale.len?M.scale.len/M.scale.n:0; // 每 1 單位的世界座標長度
+const MG=400,RK=M.reveal||1;
+const LR=$("landRect");[["x",BB[0]-MG],["y",BB[1]-MG],["width",BB[2]-BB[0]+MG*2],["height",BB[3]-BB[1]+MG*2]].forEach(([k,v])=>LR.setAttribute(k,v));
+const MK=$("reveal");[["x",BB[0]-MG],["y",BB[1]-MG],["width",BB[2]-BB[0]+MG*2],["height",BB[3]-BB[1]+MG*2]].forEach(([k,v])=>MK.setAttribute(k,v));
+const terrain=$("terrain"),routesG=$("routes"),revealG=$("revealG"),gridG=$("grid"),overlay=$("overlay");
+if(M.grid&&SC){const st=M.scale.n*SC;
+  for(let x=Math.floor((BB[0]-MG)/st)*st;x<BB[2]+MG;x+=st)el("line",{x1:x,y1:BB[1]-MG,x2:x,y2:BB[3]+MG,...NSS},gridG);
+  for(let y=Math.floor((BB[1]-MG)/st)*st;y<BB[3]+MG;y+=st)el("line",{x1:BB[0]-MG,y1:y,x2:BB[2]+MG,y2:y,...NSS},gridG)}
+if(!SC)$("scale").hidden=true;
+
+/* ---------- 地形 ---------- */
+if(M.base&&M.base.href)el("image",{href:M.base.href,x:M.base.x||BB[0],y:M.base.y||BB[1],width:M.base.w||BB[2]-BB[0],height:M.base.h||BB[3]-BB[1],opacity:M.base.o==null?1:M.base.o,preserveAspectRatio:"none"},$("base"));
+const LAYER={sea:0,water:0,forest:1,hills:1,desert:1,path:2,marsh:2,river:3,line:4,ridge:5};
+const nearRiver=(x,y)=>Object.values(RIV).some(a=>{for(let i=0;i<a.length-1;i++)if(distSeg(x,y,a[i],a[i+1])<9)return true;return false});
+const seed0=M.seed==null?1:M.seed;
+TERR.map((t,i)=>[t,i]).sort((a,b)=>(LAYER[a[0].k]||0)-(LAYER[b[0].k]||0)||a[1]-b[1]).forEach(([t,i])=>{
+  const r=rng(seed0+"|"+(t.id||"#"+i)),pts=t.pts||[];
+  switch(t.k){
+    case"sea":case"water":el("path",{d:smoothC(pts),class:"sea",...NSS},terrain);break;
+    case"marsh":el("ellipse",{cx:t.cx,cy:t.cy,rx:t.rx,ry:t.ry,transform:`rotate(${t.rot||0} ${t.cx} ${t.cy})`,class:"marsh",...NSS},terrain);break;
+    case"forest":{let d="";scatter(pts,t.step||13,r,(x,y)=>{const s=2.4+r()*1.6;d+=`M${f1(x-s)},${f1(y)}L${f1(x)},${f1(y-s*2.6)}L${f1(x+s)},${f1(y)}Z`});el("path",{d,class:"tree",...NSS},terrain);break}
+    case"hills":{let d="";scatter(pts,t.step||16,r,(x,y)=>{const s=4+r()*3;d+=`M${f1(x-s)},${f1(y)}Q${f1(x)},${f1(y-s*1.4)} ${f1(x+s)},${f1(y)}`});el("path",{d,class:"hill",...NSS},terrain);break}
+    case"desert":{let d="";scatter(pts,t.step||18,r,(x,y)=>{d+=`M${f1(x-6)},${f1(y)}q3,-3.5 6,0t6,0`});el("path",{d,class:"dune",...NSS},terrain);break}
+    case"ridge":{const a=t.a,b=t.b,s0=t.s||3.4;let d="";
+      const len=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(3,Math.round(len/(s0*2.8)));
+      for(let j=0;j<=n;j++){const u=j/n,x=a[0]+(b[0]-a[0])*u+(r()-.5)*s0*2,y=a[1]+(b[1]-a[1])*u+(r()-.5)*s0*2;
+        if(nearRiver(x,y))continue;const s=s0*(.9+r()*.6),h=s*(.8+r()*.6);
+        d+=`M${f1(x-s)},${f1(y)}Q${f1(x-s*.35)},${f1(y-h*.55)} ${f1(x)},${f1(y-h)}Q${f1(x+s*.4)},${f1(y-h*.5)} ${f1(x+s*1.1)},${f1(y)}Z`}
+      el("path",{d,class:"mtn",...NSS},terrain);break}
+    case"river":{const d=smooth(pts);
+      el("path",{d,class:"riv-bank","stroke-width":(t.w||1.6)*3.4,...NSS},terrain);
+      el("path",{d,class:"riv","stroke-width":t.w||1.6,...NSS},terrain);break}
+    case"line":{const c=({boundary:"bound",wall:"wall",road:"road",coast:"coast"})[t.cls]||"bound";
+      el("path",{d:(c==="wall"||t.sharp)?poly(pts,t.closed):smooth(pts)+(t.closed?"Z":""),class:c,...NSS},terrain);break}
+    case"path":el("path",{d:t.d,class:({boundary:"bound",wall:"wall",road:"road",coast:"coast",sea:"sea",river:"riv"})[t.cls]||"coast",...NSS},terrain);break;
+    default:warn("未知的地形種類",t.k)}
+});
+
+/* ---------- 路線與迷霧（迷霧只會依「已列出的路線與地點」揭開） ---------- */
+const MODE={solid:"",dash:"dash",dot:"dot",plan:"plan"};
+const rtEls=RT.map(r=>{const d=smooth(r.pts);
+  const e=el("path",{d,class:"rt "+(MODE[r.m]||""),...NSS},routesG);
+  el("path",{d,fill:"none",stroke:r.m==="plan"?"#7a7a7a":"#fff","stroke-width":(r.m==="plan"?46:62)*RK,"stroke-linecap":"round","stroke-linejoin":"round"},revealG);
+  return e});
+PLS.forEach(p=>{if(p.t==="edge")return;
+  const r=p.r||({h:34,p:40})[p.s]||44;
+  el("circle",{cx:p.x,cy:p.y,r:r*RK,fill:p.s==="h"?"#6e6e6e":p.s==="p"?"#8a8a8a":"#fff"},revealG)});
+(M.seen||[]).forEach(a=>el("circle",{cx:a.x,cy:a.y,r:(a.r||40)*RK,fill:a.g||"#9a9a9a"},revealG)); // 選填：遠望到的範圍
+
+/* ---------- 文字標籤 ---------- */
+const geoEls=LBS.map(g=>{const e=el("text",{class:"lbl "+(g.cls||"geo"),"text-anchor":"middle","dominant-baseline":"central"},overlay);e.textContent=g.t;return{g,e}});
+
+/* ---------- 地點標記：狀態外圈 + 線條圖示（圖示片段取自 MAP.icons，24×24 格） ---------- */
+const ICONS=MAP.icons||{},GENERIC='<circle cx="12" cy="12" r="3"/>';
+const ORDER=p=>(p.minK?0:1)+(p.s==="c"?1:0);
+const markEls=[...PLS].sort((a,b)=>ORDER(a)-ORDER(b)).map(p=>{
+  const kind=p.t||"site",edge=kind==="edge";
+  const g=el("g",{class:`mk ${p.s||"v"} ${edge?"edge":""}`,"data-id":p.id,tabindex:"0",role:"button","aria-label":p.n},overlay);
+  el("circle",{class:"hit",r:18},g);
+  if(!edge){
+    if(p.s==="c")el("circle",{class:"pulse",r:12},g);
+    el("circle",{class:"bk",r:11},g);
+    el("g",{class:"ic",transform:"translate(-8,-8) scale(.6667)"},g).innerHTML=ICONS[kind]||(warn("沒有這個圖示，改用通用圓點",kind),GENERIC)}
+  const off={l:[-16,0,"end"],r:[16,0,"start"],t:[0,-19,"middle"],b:[0,21,"middle"]}[p.pos||"r"];
+  const tx=el("text",{x:edge?0:off[0],y:edge?0:off[1],"text-anchor":edge?"middle":off[2],"dominant-baseline":"central"},g);tx.textContent=p.n;
+  return{p,g}});
+
+/* ---------- 視圖 ---------- */
+const svg=$("map");let VW=0,VH=0;
+const view={k:1,tx:0,ty:0};
+const KMIN=.15,KMAX=40;
+let filter=0; // 0＝全程
+const topInset=()=>document.querySelector(".top").getBoundingClientRect().bottom+8;
+const bottomInset=()=>{const c=$("card");return(!c.hidden&&innerWidth<=640)?c.getBoundingClientRect().height:0};
+function apply(){
+  $("world").setAttribute("transform",`translate(${view.tx},${view.ty}) scale(${view.k})`);
+  const S=(x,y)=>[x*view.k+view.tx,y*view.k+view.ty],k=view.k;
+  geoEls.forEach(({g,e})=>{const[x,y]=S(g.x,g.y);e.setAttribute("transform",`translate(${x},${y}) rotate(${g.rot||0})`);
+    e.style.display=(g.minK&&k<g.minK)||(g.maxK&&k>g.maxK)?"none":"";
+    e.style.opacity=g.ch&&filter&&!g.ch.includes(filter)?.3:""});
+  markEls.forEach(({p,g})=>{const[x,y]=S(p.x,p.y);g.setAttribute("transform",`translate(${f1(x)},${f1(y)})`);
+    g.style.display=(p.hideAbove&&k>=p.hideAbove)||(p.showK&&k<p.showK)?"none":"";
+    g.classList.toggle("dot",!!(p.minK&&k<p.minK))});
+  if(SC){const u=M.scale.u||"",lad=[1000,500,300,200,100,50,20,10,5,2,1,.5,.2,.1];let v=lad[lad.length-1];
+    for(const c of lad){if(c*SC*k<=130){v=c;break}}
+    $("scaleBar").style.width=(v*SC*k).toFixed(0)+"px";$("scaleTxt").textContent=v+u}
+}
+function resize(){const r=svg.getBoundingClientRect();VW=r.width;VH=r.height;svg.setAttribute("viewBox",`0 0 ${VW} ${VH}`);apply()}
+function target(b,minSize){
+  let[x0,y0,x1,y1]=b;const ms=minSize||30;
+  if(x1-x0<ms){const c=(x0+x1)/2;x0=c-ms/2;x1=c+ms/2}if(y1-y0<ms){const c=(y0+y1)/2;y0=c-ms/2;y1=c+ms/2}
+  const top=topInset(),bot=Math.max(70,bottomInset()+20),pad=24,aw=VW-pad*2,ah=VH-top-bot;
+  const k=Math.max(KMIN,Math.min(KMAX,Math.min(aw/(x1-x0),ah/(y1-y0))));
+  return{k,tx:VW/2-(x0+x1)/2*k,ty:top+ah/2-(y0+y1)/2*k}}
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let anim=0;
+function animateTo(t){
+  cancelAnimationFrame(anim);
+  if(reduce){Object.assign(view,t);apply();return}
+  const s={...view},t0=performance.now(),D=520;
+  const step=now=>{let u=Math.min(1,(now-t0)/D);u=1-Math.pow(1-u,3);
+    const k=Math.exp(Math.log(s.k)+(Math.log(t.k)-Math.log(s.k))*u);
+    const cs=[(VW/2-s.tx)/s.k,(VH/2-s.ty)/s.k],ct=[(VW/2-t.tx)/t.k,(VH/2-t.ty)/t.k];
+    const cx=cs[0]+(ct[0]-cs[0])*u,cy=cs[1]+(ct[1]-cs[1])*u;
+    view.k=k;view.tx=VW/2-cx*k;view.ty=VH/2-cy*k;apply();if(u<1)anim=requestAnimationFrame(step)};
+  anim=requestAnimationFrame(step)}
+function zoomAt(f,sx,sy){const k=Math.max(KMIN,Math.min(KMAX,view.k*f)),r=k/view.k;view.tx=sx-(sx-view.tx)*r;view.ty=sy-(sy-view.ty)*r;view.k=k;apply()}
+const scaled=f=>{const k=Math.max(KMIN,Math.min(KMAX,view.k*f)),r=k/view.k,cx=VW/2,cy=VH/2;return{k,tx:cx-(cx-view.tx)*r,ty:cy-(cy-view.ty)*r}};
+const fitAll=()=>animateTo(target(BB));
+
+/* ---------- 拖曳、捏合、滾輪、鍵盤 ---------- */
+const ptrs=new Map();let downInfo=null,pinch=null;
+svg.addEventListener("pointerdown",e=>{
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});cancelAnimationFrame(anim);
+  if(ptrs.size===1){const m=e.target.closest&&e.target.closest(".mk");downInfo={x:e.clientX,y:e.clientY,tx:view.tx,ty:view.ty,mk:m,moved:false}}
+  if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),k:view.k,mx:(a.x+b.x)/2,my:(a.y+b.y)/2,tx:view.tx,ty:view.ty};if(downInfo)downInfo.moved=true}
+  svg.classList.add("dragging")});
+addEventListener("pointermove",e=>{
+  if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  const r=svg.getBoundingClientRect();
+  if(ptrs.size===2&&pinch){const[a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);
+    const k=Math.max(KMIN,Math.min(KMAX,pinch.k*d/pinch.d)),mx=(a.x+b.x)/2-r.left,my=(a.y+b.y)/2-r.top;
+    const wx=(pinch.mx-r.left-pinch.tx)/pinch.k,wy=(pinch.my-r.top-pinch.ty)/pinch.k;
+    view.k=k;view.tx=mx-wx*k;view.ty=my-wy*k;apply();return}
+  if(ptrs.size===1&&downInfo){const dx=e.clientX-downInfo.x,dy=e.clientY-downInfo.y;
+    if(Math.hypot(dx,dy)>5)downInfo.moved=true;
+    if(downInfo.moved){view.tx=downInfo.tx+dx;view.ty=downInfo.ty+dy;apply()}}});
+const up=e=>{
+  if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);
+  if(ptrs.size<2)pinch=null;
+  if(ptrs.size===1){const[a]=[...ptrs.values()];downInfo={x:a.x,y:a.y,tx:view.tx,ty:view.ty,mk:null,moved:true}}
+  if(ptrs.size===0){svg.classList.remove("dragging");
+    if(downInfo&&!downInfo.moved&&e.type==="pointerup"){if(downInfo.mk)select(downInfo.mk.dataset.id);else closeCard()}
+    downInfo=null}};
+addEventListener("pointerup",up);addEventListener("pointercancel",up);
+svg.addEventListener("wheel",e=>{e.preventDefault();const r=svg.getBoundingClientRect();
+  zoomAt(Math.exp(-(e.ctrlKey?e.deltaY*3:e.deltaY)*.0016),e.clientX-r.left,e.clientY-r.top)},{passive:false});
+svg.addEventListener("dblclick",e=>{const r=svg.getBoundingClientRect();if(!e.target.closest(".mk"))zoomAt(2,e.clientX-r.left,e.clientY-r.top)});
+svg.addEventListener("keydown",e=>{const m=e.target.closest&&e.target.closest(".mk");if(m&&(e.key==="Enter"||e.key===" ")){e.preventDefault();select(m.dataset.id)}});
+$("zin").onclick=()=>animateTo(scaled(1.8));$("zout").onclick=()=>animateTo(scaled(1/1.8));$("zfit").onclick=()=>setFilter(0);
+
+/* ---------- 階段篩選 ---------- */
+const chips=$("chips"),chById={};CHS.forEach(c=>chById[c.id]=c);
+const mkChip=(v,txt,cls)=>{const b=document.createElement("button");b.textContent=txt;b.dataset.v=v;if(cls)b.className=cls;b.setAttribute("aria-pressed",v===0);b.onclick=()=>setFilter(v);chips.appendChild(b)};
+if(CHS.length){mkChip(0,"全程");CHS.forEach(c=>mkChip(c.id,c.s||c.n,c.plan?"plan":""))}else chips.hidden=true;
+function setFilter(v){
+  filter=v;closeCard();
+  chips.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===String(v)));
+  rtEls.forEach((e,i)=>{const on=RT[i].ch.includes(v);e.classList.toggle("dim",!!v&&!on);e.classList.toggle("hi",!!v&&on)});
+  markEls.forEach(({p,g})=>g.classList.toggle("dim",!!v&&!p.ch.includes(v)));
+  const c=chById[v];
+  $("caption").textContent=v&&c?[c.n,c.t,c.w].filter(Boolean).join("　·　"):"";
+  apply();
+  if(!v){fitAll();return}
+  let b;
+  if(c&&c.f)b=boxPts(c.f);
+  else{const pts=[];RT.forEach(r=>{if(r.ch.includes(v))pts.push(...r.pts)});PLS.forEach(p=>{if(p.ch.includes(v)&&p.t!=="edge")pts.push([p.x,p.y])});b=pts.length?bboxOf(pts):BB;
+    if(!pts.length)return fitAll()}
+  animateTo(target(Array.isArray(b[0])?bboxOf(b):b,c&&c.min))}
+
+/* ---------- 地點卡 ---------- */
+const card=$("card"),TAG={c:["今所在","c"],v:["已到訪","v"],h:["耳聞未至","h"],p:["擬往","p"]};
+function select(id){
+  const p=byId[id];if(!p)return;
+  markEls.forEach(({p:q,g})=>g.classList.toggle("sel",q.id===id));
+  const tg=TAG[p.s]||TAG.v;
+  $("cardTags").innerHTML=`<span class="tag ${tg[1]}">${tg[0]}</span>`;
+  $("cardH").textContent=p.n.replace(/[↑↗→←↓↘↙↖]\s?|\s?[↑↗→←↓↘↙↖]/g,"");
+  $("cardNow").textContent=p.now||"";
+  $("cardCh").textContent=p.ch.map(c=>chById[c]?chById[c].n:"").filter(Boolean).join("、");
+  $("cardD").textContent=p.d||"";
+  card.hidden=false;document.body.classList.add("card-open");
+  requestAnimationFrame(()=>{
+    const sx=p.x*view.k+view.tx,sy=p.y*view.k+view.ty;
+    const top=topInset(),bot=VH-bottomInset()-20,right=innerWidth>640?VW-card.offsetWidth-32:VW-20;
+    let k=view.k;if(p.minK&&k<p.minK)k=p.minK*1.15;
+    const inside=sx>20&&sx<right&&sy>top&&sy<bot&&k===view.k;
+    if(!inside){const cx=(20+right)/2,cy=(top+bot)/2;animateTo({k,tx:cx-p.x*k,ty:cy-p.y*k})}})}
+function closeCard(){card.hidden=true;document.body.classList.remove("card-open");markEls.forEach(({g})=>g.classList.remove("sel"))}
+$("cardX").onclick=closeCard;
+addEventListener("keydown",e=>{if(e.key==="Escape")closeCard()});
+
+/* ---------- 圖例（只列出這張圖用到的項目） ---------- */
+const LG=Object.assign({c:"今所在",v:"已到訪",h:"耳聞未至",p:"擬往",solid:"路線",dash:"路線（另一類）",dot:"支線",plan:"擬行路線",fog:"未知之地"},M.legend);
+const used=new Set([...PLS.filter(p=>p.t!=="edge").map(p=>p.s||"v"),...RT.map(r=>r.m||"solid")]);
+const CIRC=(f,s,x)=>`<circle cx="13" cy="7" r="5" fill="${f}" stroke="${s}" stroke-width="1.5" ${x||""}/>`;
+const LI={
+ c:CIRC("var(--route)","var(--route)")+'<circle cx="13" cy="7" r="2" fill="var(--panel)"/>',
+ v:CIRC("var(--land)","var(--ink)")+'<circle cx="13" cy="7" r="2" fill="var(--ink)"/>',
+ h:CIRC("var(--land)","var(--ink-soft)",'stroke-dasharray="2.5 2"'),
+ p:CIRC("var(--land)","var(--plan)",'stroke-dasharray="3 2"'),
+ solid:'<path d="M1 7H25" stroke="var(--route)" stroke-width="2.6"/>',
+ dash:'<path d="M1 7H25" stroke="var(--route)" stroke-width="2.6" stroke-dasharray="6 4"/>',
+ dot:'<path d="M1 7H25" stroke="var(--route)" stroke-width="2" stroke-dasharray="2 4"/>',
+ plan:'<path d="M1 7H25" stroke="var(--plan)" stroke-width="2.6" stroke-dasharray="3 6"/>',
+ fog:'<rect x="1" y="1" width="24" height="12" fill="var(--fog)" stroke="var(--line)"/>'};
+["c","v","h","p","solid","dash","dot","plan","fog"].forEach(k=>{
+  if(k!=="fog"&&!used.has(k))return;
+  const li=document.createElement("li");li.innerHTML=`<svg viewBox="0 0 26 14">${LI[k]}</svg>`;
+  const s=document.createElement("span");s.textContent=LG[k];li.appendChild(s);$("legendL").appendChild(li)});
+$("legendN").textContent=M.note||"";$("legendN").hidden=!M.note;
+const lt=$("legendT"),lb=$("legendB");
+function setLegend(open){lb.hidden=!open;lt.setAttribute("aria-expanded",open);lt.textContent=open?"圖例 ▾":"圖例 ▸"}
+lt.onclick=()=>setLegend(lb.hidden);
+setLegend(innerWidth>640);
+
+addEventListener("resize",resize);
+resize();
+Object.assign(view,target(VW<640&&M.viewPhone?M.viewPhone:BB));apply();
+})();
+</script>
+</body>
+</html>
